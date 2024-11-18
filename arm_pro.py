@@ -19,6 +19,7 @@ class AL5D:
         self.port = port
         self.baudrate = baudrate
         self.ser = None
+        self.angles = [BASE_ANGLE] * TOTAL_CHANNELS  # 各チャンネルの角度を保持
         self.connect()
         self.initialize_position()
 
@@ -30,25 +31,25 @@ class AL5D:
             print(f"シリアルポートエラー: {e}")
 
     def initialize_position(self):
-        if self.ser and self.ser.is_open:
-            for channel in range(TOTAL_CHANNELS):
-                command = f"#{channel} P{self.base_angle} S{BASE_SPEED}\r"
-                print(f"送信コマンド: {command}")
-                self.ser.write(command.encode("ascii"))
-                time.sleep(0.1)  # 各コマンドの間に少し待つ
-            print("すべてのサーボモーターを初期位置にセットしました。")
-            time.sleep(1)  # 応答を待つ
-            response = self.ser.read_all().decode("ascii")
-            print(f"受信応答: {response}")
+        for channel in range(TOTAL_CHANNELS):
+            self.move_servo(channel, self.base_angle, BASE_SPEED)
+        print("すべてのサーボモーターを初期位置にセットしました。")
 
-    def move_servo(self, channel, position, speed):
+    def send_command(self, channel, position, speed):
         if self.ser and self.ser.is_open:
             command = f"#{channel} P{position} S{speed}\r"
             print(f"送信コマンド: {command}")
             self.ser.write(command.encode("ascii"))
-            time.sleep(1)  # 応答を待つ
+            time.sleep(0.1)  # 各コマンドの間に少し待つ
             response = self.ser.read_all().decode("ascii")
             print(f"受信応答: {response}")
+
+    def move_servo(self, channel, position, speed):
+        if MIN_ANGLE <= position <= MAX_ANGLE:
+            self.angles[channel] = position  # 角度を更新
+            self.send_command(channel, position, speed)
+        else:
+            print(f"無効な位置: {position}。範囲は{MIN_ANGLE}から{MAX_ANGLE}です。")
 
     def close(self):
         if self.ser and self.ser.is_open:
@@ -58,10 +59,10 @@ class AL5D:
 
 if __name__ == "__main__":
     robot_arm = AL5D()
-    # robot_arm.move_servo(0, 1700, 750)
-    robot_arm.move_servo(5, 500, 300)
-    robot_arm.move_servo(4, 500, 300)
-    robot_arm.move_servo(2, 1700, 300)
+    robot_arm.move_servo(0, 1700, 300)
     robot_arm.move_servo(1, 2000, 300)
-    robot_arm.move_servo(0, 500, 300)
+    robot_arm.move_servo(2, 1500, 300)
+    robot_arm.move_servo(3, 1200, 300)
+    robot_arm.move_servo(4, 1800, 300)
+    print(robot_arm.angles)
     robot_arm.close()
